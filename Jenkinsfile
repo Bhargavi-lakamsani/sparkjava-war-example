@@ -5,22 +5,24 @@ pipeline {
         DOCKER_IMAGE = 'sparkle-java'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKER_IMAGE_NAME = "bhargavilakamsani/${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}"
+        KUBECONFIG = '/var/snap/microk8s/current/credentials/client.config'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scmGit(
-                    branches: [[name: '*/master']],
-                    extensions: [],
-                    userRemoteConfigs: [[url: 'https://github.com/Bhargavi-lakamsani/sparkjava-war-example.git']]
-                )
+                checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE_NAME} ."
+                script {
+                    def dockerImage = docker.build("${DOCKER_IMAGE_NAME}", '.')
+                    dockerImage.inside {
+                        sh 'mvn clean install'
+                    }
+                }
             }
         }
 
@@ -37,19 +39,12 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sshagent(['k8s']) {
-                    script {
-                        // Copy deployment files to the Kubernetes server
-                        sh 'scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@52.66.201.175:/home/ubuntu'
-                        
-                        // Apply or create Kubernetes resources
-                        try {
-                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/deployment.yaml"'
-                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/service.yaml"'
-                        } catch (Exception e) {
-                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/deployment.yaml"'
-                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/service.yaml"'
-                        }
+                script {
+                    sshagent(['k8s']) {
+                        sh '''
+                        scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@52.66.201.175:/home/ubuntu
+                        ssh -i /var/lib/jenkins/.ssh/id_rsa ubuntu@52.66.201.175 "export KUBECONFIG=/var/snap/microk8s/current/credentials/client.config && kubectl apply -f /home/ubuntu/deployment.yaml -f /home/ubuntu/service.yaml"
+                        '''
                     }
                 }
             }
