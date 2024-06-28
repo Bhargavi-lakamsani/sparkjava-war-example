@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: sparkle-java
-        image: bhargavilakamsani/sparkle-java:latest
+        image: bhargavilakamsani/sparkle-java:"${BUILD_NUMBER}"
         ports:
         - containerPort: 8080
