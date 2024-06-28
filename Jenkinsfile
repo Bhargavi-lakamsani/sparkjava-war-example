@@ -2,7 +2,7 @@ pipeline {
     agent { label 'docker' }
 
     environment {
-        DOCKER_IMAGE = 'tomcatnew'
+        DOCKER_IMAGE = 'sparkle-java'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKER_IMAGE_NAME = "bhargavilakamsani/${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}"
         KUBE_SSH_CREDENTIALS = 'k8s'
