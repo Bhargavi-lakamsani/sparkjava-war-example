@@ -1,51 +1,51 @@
 pipeline {
-    agent { label 'docker' }
+     agent { label 'docker' }
 
-    environment {
-        DOCKER_IMAGE = 'sparkle-java'
+  environment {
+        DOCKER_IMAGE = ''
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKER_IMAGE_NAME = "bhargavilakamsani/${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}"
-        KUBE_SSH_CREDENTIALS = 'k8s'
-        REMOTE_HOST = 'ubuntu@52.66.201.175'
     }
-
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Bhargavi-lakamsani/sparkjava-war-example.git']])
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    sh "docker build -t ${DOCKER_IMAGE_NAME} ."
-                }
+                sh 'docker build -t $DOCKER_IMAGE_NAME .'
             }
         }
 
         stage('Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'bhargavi-docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        sh """
-                        echo \${DOCKER_PASS} | docker login -u \${DOCKER_USER} --password-stdin
-                        docker push ${DOCKER_IMAGE_NAME}
-                        """
-                    }
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push $DOCKER_IMAGE_NAME
+                    '''
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-                script {
-                    sshagent(credentials: [KUBE_SSH_CREDENTIALS]) {
-                        sh """
-                        scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ${REMOTE_HOST}:/home/ubuntu
-                        ssh ${REMOTE_HOST} "kubectl apply -f /home/ubuntu/deployment.yaml"
-                        ssh ${REMOTE_HOST} "kubectl apply -f /home/ubuntu/service.yaml"
-                        """
+                sshagent(['k8s']) {
+                    script {
+                       
+                        sh 'scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@52.66.201.175:/home/ubuntu'
+                        
+                        try {
+                           
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/deployment.yaml"'
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/service.yaml"'
+                        } catch (Exception e) {
+                            
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/deployment.yaml"'
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/service.yaml"'
+                        }
                     }
                 }
             }
