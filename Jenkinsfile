@@ -36,14 +36,19 @@ pipeline {
         }
 
         stage('Deploy') {
-    steps {
-        script {
-            sshagent(credentials: ['k8s']) {
-                sh """
-                scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ${REMOTE_HOST}:/home/ubuntu
-                ssh ${REMOTE_HOST} "kubectl apply -f /home/ubuntu/deployment.yaml"
-                ssh ${REMOTE_HOST} "kubectl apply -f /home/ubuntu/service.yaml"
-                """
+            steps {
+                sshagent(['k8s']) {
+                    script {
+                        // Copy deployment files to the Kubernetes server
+                        sh 'scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@52.66.201.175:/home/ubuntu'
+                        
+                        // Apply or create Kubernetes resources
+                        try {
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/deployment.yaml"'
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl apply -f /home/ubuntu/service.yaml"'
+                        } catch (Exception e) {
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/deployment.yaml"'
+                            sh 'ssh ubuntu@52.66.201.175 "kubectl create -f /home/ubuntu/service.yaml"'
                         }
                     }
                 }
