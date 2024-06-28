@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-tomcatnew
+  name: sparkle-java
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-tomcatnew
+      app: sparkle-java
   template:
     metadata:
       labels:
-        app: my-tomcatnew
+        app:sparkle-java
     spec:
       containers:
-      - name: my-tomcatnew
-        image: bhargavilakamsani/tomcatnew:latest
+      - name: sparkle-java
+        image: bhargavilakamsani/sparkle-java:latest
         ports:
         - containerPort: 8080
